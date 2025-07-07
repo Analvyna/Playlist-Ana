@@ -39,7 +39,7 @@
     }
 
     textarea {
-      resize: vertical; /* Mengubah dari none menjadi vertical */
+      resize: vertical;
       height: 80px;
     }
 
@@ -69,7 +69,7 @@
       padding: 10px;
       max-width: 600px;
       box-shadow: 0 0 15px #ff69b4;
-      position: relative; /* Penting untuk posisi tombol hapus */
+      position: relative;
     }
 
     .song-message {
@@ -78,39 +78,18 @@
       margin-bottom: 10px;
       text-align: left;
       font-style: italic;
-      padding: 0 10px; /* Tambahkan padding agar tidak terlalu mepet */
+      padding: 0 10px;
     }
 
     iframe {
       border-radius: 12px;
       width: 100%;
       box-shadow: 0 0 10px #ff69b4;
-      display: block; /* Menghilangkan spasi ekstra di bawah iframe */
-    }
-
-    .sticker {
-      width: 100px;
-      margin: 10px;
-      animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0px);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
-    }
-
-    .sticker-container {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
+      display: block;
     }
 
     .remove-btn {
-      background-color: #ff4d4d; /* Warna merah */
+      background-color: #ff4d4d;
       color: white;
       border: none;
       border-radius: 5px;
@@ -118,7 +97,7 @@
       cursor: pointer;
       font-size: 0.8em;
       margin-top: 10px;
-      float: right; /* Posisikan di kanan */
+      float: right;
     }
     .remove-btn:hover {
       background-color: #ff0000;
@@ -128,12 +107,6 @@
 <body>
 
   <h1>🎀 Playlist Anaa cantiiii 🎀</h1>
-
-  <div class="sticker-container">
-    <img src="https://i.ibb.co/hK8bM6S/rabbit-sticker-1.png" class="sticker" alt="stiker kelinci lucu 1" />
-    <img src="https://i.ibb.co/L9d0k3r/rabbit-sticker-2.png" class="sticker" alt="stiker kelinci lucu 2" />
-    <img src="https://i.ibb.co/s51g69B/rabbit-sticker-3.png" class="sticker" alt="stiker kelinci lucu 3" />
-  </div>
 
   <div class="form-container">
     <input type="text" id="spotifyUrl" placeholder="Link lagu Spotify" />
@@ -148,7 +121,6 @@
     <p style="color: #eee;">Memuat lagu...</p>
   </div>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script>
@@ -195,7 +167,7 @@
       }
 
       try {
-        await db.collection('ana_playlist_items').add({ // Menggunakan koleksi baru: ana_playlist_items
+        await db.collection('ana_playlist_items').add({
           spotifyUrl: url,
           spotifyType: type,
           spotifyId: id,
@@ -205,7 +177,6 @@
         spotifyUrlInput.value = '';
         messageInput.value = '';
         alert('Lagu dan pesan berhasil ditambahkan!');
-        // onSnapshot akan otomatis memperbarui tampilan
       } catch (error) {
         console.error("Error adding data:", error);
         alert(`Gagal menambahkan: ${error.message}`);
@@ -227,7 +198,7 @@
       }
 
       if (data.spotifyId && (data.spotifyType === 'track' || data.spotifyType === 'album' || data.spotifyType === 'playlist')) {
-        const embedUrl = `https://open.spotify.com/embed/${data.spotifyType}/${data.spotifyId}?utm_source=generator`;
+        const embedUrl = `https://open.spotify.com/embed/${data.spotifyType}/${data.spotifyId}?utm_source=generator`; // Perbaikan embed URL
         const iframeHeight = (data.spotifyType === 'track') ? 152 : 352;
         const iframe = document.createElement('iframe');
         iframe.style.borderRadius = '12px';
@@ -255,9 +226,9 @@
 
     async function fetchPlaylist() {
         const playlistElement = document.getElementById('playlist');
-        playlistElement.innerHTML = '<p style="color: #eee;">Memuat lagu...</p>'; // Tampilkan pesan loading
+        playlistElement.innerHTML = '<p style="color: #eee;">Memuat lagu...</p>';
 
-        db.collection('ana_playlist_items').orderBy('addedAt', 'desc').onSnapshot((snapshot) => { // Menggunakan koleksi baru
+        db.collection('ana_playlist_items').orderBy('addedAt', 'desc').onSnapshot((snapshot) => {
             playlistElement.innerHTML = '';
 
             if (snapshot.empty) {
@@ -277,7 +248,7 @@
     async function removeSong(id) {
       if (!confirm('Yakin ingin menghapus lagu ini?')) return;
       try {
-        await db.collection('ana_playlist_items').doc(id).delete(); // Menggunakan koleksi baru
+        await db.collection('ana_playlist_items').doc(id).delete();
         alert('Lagu berhasil dihapus!');
       } catch (error) {
         console.error("Error removing song:", error);
