@@ -39,7 +39,7 @@
     }
 
     textarea {
-      resize: none;
+      resize: vertical; /* Mengubah dari none menjadi vertical */
       height: 80px;
     }
 
@@ -69,18 +69,23 @@
       padding: 10px;
       max-width: 600px;
       box-shadow: 0 0 15px #ff69b4;
+      position: relative; /* Penting untuk posisi tombol hapus */
     }
 
     .song-message {
       font-size: 1em;
       color: #d63384;
       margin-bottom: 10px;
+      text-align: left;
+      font-style: italic;
+      padding: 0 10px; /* Tambahkan padding agar tidak terlalu mepet */
     }
 
     iframe {
       border-radius: 12px;
       width: 100%;
       box-shadow: 0 0 10px #ff69b4;
+      display: block; /* Menghilangkan spasi ekstra di bawah iframe */
     }
 
     .sticker {
@@ -102,6 +107,21 @@
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
+    }
+
+    .remove-btn {
+      background-color: #ff4d4d; /* Warna merah */
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.8em;
+      margin-top: 10px;
+      float: right; /* Posisikan di kanan */
+    }
+    .remove-btn:hover {
+      background-color: #ff0000;
     }
   </style>
 </head>
@@ -125,45 +145,147 @@
 
   <div class="playlist" id="playlist">
     <h2>🎵 Daftar Lagu Kamu 🎵</h2>
+    <p style="color: #eee;">Memuat lagu...</p>
   </div>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script>
-    function addSong() {
-      const url = document.getElementById("spotifyUrl").value.trim();
-      const message = document.getElementById("message").value.trim();
-      const match = url.match(/spotify\.com\/(track|playlist)\/([a-zA-Z0-9]+)/);
+    // Konfigurasi Firebase Anda (dari proyek ana-cantiii)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCfaxJylSTSs2pptVxw-ebnkOEZsLEmtV8",
+      authDomain: "ana-cantiii.firebaseapp.com",
+      projectId: "ana-cantiii",
+      storageBucket: "ana-cantiii.firebasestorage.app",
+      messagingSenderId: "997694908881",
+      appId: "1:997694908881:web:b8ab2a0cb88f31d8cb18f0",
+      measurementId: "G-94HP5DJ4MF"
+    };
 
-      if (match) {
-        const type = match[1];
-        const id = match[2];
+    // Inisialisasi Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-        const songBlock = document.createElement("div");
-        songBlock.className = "song-block";
+    // Regex untuk validasi URL Spotify yang lebih baik
+    const spotifyUrlRegex = /^(?:https?:\/\/(?:open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)(?:\?.*)?|spotify:((track|album|playlist|artist):)?([a-zA-Z0-9]+)))$/;
 
-        if (message) {
-          const msgElem = document.createElement("div");
-          msgElem.className = "song-message";
-          msgElem.textContent = "💌 " + message;
-          songBlock.appendChild(msgElem);
+    async function addSong() {
+      const spotifyUrlInput = document.getElementById('spotifyUrl');
+      const messageInput = document.getElementById('message');
+      const url = spotifyUrlInput.value.trim();
+      const message = messageInput.value.trim();
+
+      if (url === '' && message === '') {
+        alert('Link Spotify atau pesan tidak boleh kosong!');
+        return;
+      }
+
+      let type = '';
+      let id = '';
+
+      if (url) {
+        const match = url.match(spotifyUrlRegex);
+        if (!match) {
+          alert('Masukkan URL Spotify yang valid.');
+          return;
         }
+        type = match[1] || match[4];
+        id = match[2] || match[5];
+      }
 
-        const iframe = document.createElement("iframe");
-        // KOREKSI DI SINI: URL iframe Spotify yang benar
-        iframe.src = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
-        iframe.height = "152";
-        iframe.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
-        iframe.loading = "lazy";
-        songBlock.appendChild(iframe);
-
-        document.getElementById("playlist").appendChild(songBlock);
-
-        // Reset form
-        document.getElementById("spotifyUrl").value = "";
-        document.getElementById("message").value = "";
-      } else {
-        alert("Link Spotify tidak valid!");
+      try {
+        await db.collection('ana_playlist_items').add({ // Menggunakan koleksi baru: ana_playlist_items
+          spotifyUrl: url,
+          spotifyType: type,
+          spotifyId: id,
+          message: message,
+          addedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        spotifyUrlInput.value = '';
+        messageInput.value = '';
+        alert('Lagu dan pesan berhasil ditambahkan!');
+        // onSnapshot akan otomatis memperbarui tampilan
+      } catch (error) {
+        console.error("Error adding data:", error);
+        alert(`Gagal menambahkan: ${error.message}`);
       }
     }
+
+    function displaySong(doc) {
+      const data = doc.data();
+      const playlistElement = document.getElementById('playlist');
+      const songBlock = document.createElement('div');
+      songBlock.className = 'song-block';
+      songBlock.setAttribute('data-id', doc.id);
+
+      if (data.message) {
+        const msgElem = document.createElement('div');
+        msgElem.className = 'song-message';
+        msgElem.textContent = '💌 ' + data.message;
+        songBlock.appendChild(msgElem);
+      }
+
+      if (data.spotifyId && (data.spotifyType === 'track' || data.spotifyType === 'album' || data.spotifyType === 'playlist')) {
+        const embedUrl = `https://open.spotify.com/embed/${data.spotifyType}/${data.spotifyId}?utm_source=generator`;
+        const iframeHeight = (data.spotifyType === 'track') ? 152 : 352;
+        const iframe = document.createElement('iframe');
+        iframe.style.borderRadius = '12px';
+        iframe.src = embedUrl;
+        iframe.width = '100%';
+        iframe.height = iframeHeight;
+        iframe.frameBorder = '0';
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+        iframe.loading = 'lazy';
+        songBlock.appendChild(iframe);
+      } else if (data.spotifyUrl) {
+        const urlElem = document.createElement('p');
+        urlElem.innerHTML = `<strong>Link:</strong> <a href="${data.spotifyUrl}" target="_blank" style="color: #ff69b4;">${data.spotifyUrl}</a>`;
+        songBlock.appendChild(urlElem);
+      }
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = 'Hapus';
+      removeBtn.onclick = () => removeSong(doc.id);
+      songBlock.appendChild(removeBtn);
+
+      playlistElement.prepend(songBlock);
+    }
+
+    async function fetchPlaylist() {
+        const playlistElement = document.getElementById('playlist');
+        playlistElement.innerHTML = '<p style="color: #eee;">Memuat lagu...</p>'; // Tampilkan pesan loading
+
+        db.collection('ana_playlist_items').orderBy('addedAt', 'desc').onSnapshot((snapshot) => { // Menggunakan koleksi baru
+            playlistElement.innerHTML = '';
+
+            if (snapshot.empty) {
+                playlistElement.innerHTML = '<p style="color: #eee;">Belum ada lagu di playlist. Tambahkan satu!</p>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                displaySong(doc);
+            });
+        }, (error) => {
+            console.error("Error fetching playlist:", error);
+            playlistElement.innerHTML = '<p style="color: #ff6666;">Gagal memuat playlist. Periksa koneksi atau aturan Firebase Anda.</p>';
+        });
+    }
+
+    async function removeSong(id) {
+      if (!confirm('Yakin ingin menghapus lagu ini?')) return;
+      try {
+        await db.collection('ana_playlist_items').doc(id).delete(); // Menggunakan koleksi baru
+        alert('Lagu berhasil dihapus!');
+      } catch (error) {
+        console.error("Error removing song:", error);
+        alert(`Gagal menghapus: ${error.message}`);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchPlaylist);
   </script>
 
 </body>
